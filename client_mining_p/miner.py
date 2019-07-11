@@ -4,7 +4,7 @@ import requests
 import sys
 
 
-# TODO: Implement functionality to search for a proof 
+# TODO: Implement functionality to search for a proof
 
 
 if __name__ == '__main__':
@@ -16,8 +16,15 @@ if __name__ == '__main__':
 
     coins_mined = 0
     # Run forever until interrupted
+    print('\n')
     while True:
         # TODO: Get the last proof from the server and look for a new one
+
+        r = requests.get(url=f'{node}/last_proof')
+        data = r.json()
+        last_proof = data['last_proof']
+        print(' last proof: ', last_proof, '\n')
+
         # TODO: When found, POST it to the server {"proof": new_proof}
         # TODO: If the server responds with 'New Block Forged'
         # add 1 to the number of coins mined and print it.  Otherwise,
