@@ -1,5 +1,7 @@
 import hashlib
 import requests
+from os import path
+from uuid import uuid4
 
 import sys
 
@@ -36,7 +38,14 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         node = int(sys.argv[1])
     else:
-        node = "http://localhost:5000"
+        node = "http://127.0.0.1:5000"
+
+    if path.exists('./id.txt'):
+        f = open("id.txt", "r")
+        id = f.read()
+        f.close()
+    else:
+        id = str(uuid4()).replace('-', '')
 
     coins_mined = 0
     # Run forever until interrupted
@@ -46,7 +55,7 @@ if __name__ == '__main__':
         data = r.json()
         new_proof = proof_of_work(data.get('proof'))
 
-        post_data = {"proof": new_proof}
+        post_data = {"proof": new_proof, "id": id}
 
         r = requests.post(url=node + "/mine", json=post_data)
         data = r.json()

@@ -16,7 +16,28 @@ class Blockchain(object):
         self.current_transactions = []
         self.nodes = set()
 
-        self.new_block(previous_hash=1, proof=100)
+        self.create_genesis_block()
+
+    def create_genesis_block(self):
+        """
+        Create the genesis block and add it to the chain
+        the genesis block is the anchor of the chain and
+        must be identical across all nodes otherwise 
+        consensus will fail
+        """
+        block = {
+            'index': 1,
+            'timestamp': 0,
+            'transactions': [],
+            'proof': 99,
+            'previous_hash': 1,
+        }
+
+        # Reset the current list of transactions
+        self.current_transactions = []
+
+        self.chain.append(block)
+        return block
 
     def new_block(self, proof, previous_hash=None):
         """
@@ -39,6 +60,7 @@ class Blockchain(object):
         self.current_transactions = []
 
         self.chain.append(block)
+        self.broadcast_new_block(block)
         return block
 
     def new_transaction(self, sender, recipient, amount):
@@ -175,6 +197,21 @@ class Blockchain(object):
 
         return False
 
+    def broadcast_new_block(self, block):
+        """
+        Alert neighbors in a list of nodes that a new block has been mined
+        paramater block, type is block, block that has been mined and added
+        to the chain
+        """
+
+        post_data = {'block': block}
+        for node in self.nodes:
+            r = requests.post(f'http://{node}/block/new', json=post_data)
+
+            if r.status_code is not 200:
+                # TODO add error handling
+                pass
+
 
 # Instantiate our Node
 app = Flask(__name__)
@@ -221,6 +258,36 @@ def mine():
             'message': "Proof was invalid or already submitted."
         }
         return jsonify(response), 200
+
+
+@app.route('/block/new', methods=['POST'])
+def new_block():
+    values = request.get_json()
+
+    # Check that the required fields are in the POST'ed data
+    required = ['block']
+    if not all(k in values for k in required):
+        return 'Missing Values', 400
+
+    # TODO validate that sender is approved
+
+    # validate the block
+
+    # make sure that index is exactly one greater than last chain
+    new_block = values['block']
+    last_block = blockchain.last_block
+
+    if new_block['index'] == last_block['index'] + 1:
+        # make sure that the blocks last hash matches our hash of the last block
+        if new_block['previous_hash'] == blockchain.hash(last_block):
+            # validate proof in the new block
+            if blockchain.valid_proof(last_block['proof'], new_block['proof']):
+                # the block is good add it to the chain
+                blockchain.chain.append(new_block)
+                return 'Block accepted', 200
+    # TODO: print an error message
+    # TODO: request chain from our peers to reach a consensus
+    return 'Block rejected', 200
 
 
 @app.route('/transactions/new', methods=['POST'])
